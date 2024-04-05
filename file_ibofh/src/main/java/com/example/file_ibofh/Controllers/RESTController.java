@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.catalina.User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -18,7 +19,8 @@ import java.util.HashMap;
 public class RESTController {
     @GetMapping("/getUsers")
     public ArrayList<Users> getUsers(@RequestParam(required = false) String searchedName, @RequestParam(required = false) Integer age,
-                                     @RequestParam(required = false) String paramToSort){
+                                     @RequestParam(required = false) String paramToSort, @RequestParam(required = false) Integer ammountToReturn,
+                                     @RequestParam(required = false) Integer ammountToSkip){
         final JsonMapper map = new JsonMapper();
         try {
             int Counter = 0;
@@ -34,9 +36,7 @@ public class RESTController {
                 Counter++;
             }
             if(Counter == 0){
-                for (Users user : listOfUsers){
-                    listToReturn.add(user);
-                }
+                listToReturn.addAll(listOfUsers);
             }
             if(age != null){
                 ArrayList<Users> buffferList = new ArrayList<>();
@@ -46,23 +46,23 @@ public class RESTController {
                     }
                 }
                 listToReturn.clear();
-                for (Users user : buffferList){
-                    listToReturn.add(user);
-                }
+                listToReturn.addAll(buffferList);
                 Counter++;
             }
-            if(Counter == 0){
+            /*if(Counter == 0){
                 for (Users user : listOfUsers){
                     listToReturn.add(user);
                 }
-            }
+            }*/
             if(paramToSort != null){
-                HashMap<String, Integer> mapForSort = new HashMap<>();
+                HashMap<String, Integer> mapForSortWithNameKey = new HashMap<>();
+                HashMap<Integer, String> mapForSortWithAgeKey = new HashMap<>();
                 ArrayList<String> bufferListNames = new ArrayList<>();
                 ArrayList<Integer> bufferListAges = new ArrayList<>();
                 ArrayList<Users> bufferListToReturn = new ArrayList<>();
                 for (Users user : listToReturn){
-                    mapForSort.put(user.getName(), user.getAge());
+                    mapForSortWithNameKey.put(user.getName(), user.getAge());
+                    mapForSortWithAgeKey.put(user.getAge(), user.getName());
                     bufferListNames.add(user.getName());
                     bufferListAges.add(user.getAge());
                 }
@@ -70,10 +70,62 @@ public class RESTController {
                     case ("nameUp"):
                         Collections.sort(bufferListNames);
                         for (String Name : bufferListNames){
-                            bufferListToReturn.add()
+                            bufferListToReturn.add(new Users(Name, mapForSortWithNameKey.get(Name)));
                         }
+                        listToReturn.clear();
+                        listToReturn.addAll(bufferListToReturn);
+                        break;
+                    case ("nameDown"):
+                        Collections.sort(bufferListNames);
+                        Collections.reverse(bufferListNames);
+                        for (String Name : bufferListNames){
+                            bufferListToReturn.add(new Users(Name, mapForSortWithNameKey.get(Name)));
+                        }
+                        listToReturn.clear();
+                        listToReturn.addAll(bufferListToReturn);
+                        break;
+                    case ("ageUp"):
+                        Collections.sort(bufferListAges);
+                        for (int ageNew : bufferListAges){
+                            bufferListToReturn.add(new Users(mapForSortWithAgeKey.get(ageNew), ageNew));
+                        }
+                        listToReturn.clear();
+                        listToReturn.addAll(bufferListToReturn);
+                        break;
+                    case ("ageDown"):
+                        Collections.sort(bufferListAges);
+                        Collections.reverse(bufferListAges);
+                        for (int ageNew : bufferListAges){
+                            bufferListToReturn.add(new Users(mapForSortWithAgeKey.get(ageNew), ageNew));
+                        }
+                        listToReturn.clear();
+                        listToReturn.addAll(bufferListToReturn);
+                        break;
                 }
             }
+            if(ammountToSkip != null){
+                if(ammountToSkip > listToReturn.size()){
+                    ammountToSkip = listToReturn.size();
+                }
+                while (ammountToSkip > 0){
+                    listToReturn.remove(ammountToSkip-1);
+                    ammountToSkip -= 1;
+                }
+            }
+            if(ammountToReturn != null){
+                if (ammountToReturn > listToReturn.size()){
+                    ammountToReturn = listToReturn.size();
+                }
+                ArrayList<Users> bufferListOfUsers = new ArrayList<>();
+                    while(ammountToReturn > 0){
+                        bufferListOfUsers.add(listToReturn.get(ammountToReturn - 1));
+                        ammountToReturn -= 1;
+                    }
+                    listToReturn.clear();
+                    listToReturn.addAll(bufferListOfUsers);
+                    Collections.reverse(listToReturn);
+            }
+
 
             return listToReturn;
 
